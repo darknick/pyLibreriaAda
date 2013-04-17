@@ -35,24 +35,25 @@ image1=cv2.copyMakeBorder(image0,offset,offset,offset,offset,cv2.BORDER_CONSTANT
 ##Procesado
 #Covert to grayscale
 gray = cv2.cvtColor(image1, cv2.COLOR_BGR2GRAY)
-print type(gray)
-cvmat_image=cv.fromarray(gray)
-cv.Smooth(cvmat_image,cvmat_image,smoothtype=cv.CV_GAUSSIAN, param1=3, param2=3, param3=0, param4=0)
-print type(cvmat_image)
-graynew = numpy.asarray(cvmat_image)
-
+#print type(gray)
+#cvmat_image=cv.fromarray(gray)
+#cv.Smooth(cvmat_image,cvmat_image,smoothtype=cv.CV_GAUSSIAN, param1=3, param2=3, param3=0, param4=0)
+#print type(cvmat_image)
+#graynew = numpy.asarray(cvmat_image)
+cv2.adaptiveThreshold(gray, gray, 120, adaptive_method=cv2.CV_ADAPTIVE_THRESH_MEAN_C, thresholdType=cv2.CV_THRESH_BINARY, blockSize=3, param1=5)
 
 
 #Canny detector
-edges = cv2.Canny(graynew, 80, 120)
+edges = cv2.Canny(gray, 10, 300)
 
-cv2.namedWindow("Test")
-cv2.imshow("Test", edges)
-cv2.waitKey(0)
-cv2.destroyWindow("Test")
+#cv2.namedWindow("Test")
+#cv2.imshow("Test", edges)
+#cv2.waitKey(0)
+#cv2.destroyWindow("Test")
 
 #Hough transform
-lines = cv.HoughLines2(edges, 1, math.pi/2, 2, None, 30, 1);
+#lines = cv.HoughLines2(edges, 1, math.pi/2, 2, None, 30, 1);
+lines = cv2.HoughLinesP(edges, 1, math.pi/2, 50, 400, 100);
 for line in lines[0]:
     pt1 = (line[0],line[1])
     pt2 = (line[2],line[3])
