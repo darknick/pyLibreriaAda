@@ -3,7 +3,7 @@ import cv2
 import cv2.cv as cv
 
 ruta = "albaranestiff/alb_0001.tiff"
-image0=cv2.imread(ruta)
+image0=cv2.imread(ruta) 
 print "Cargando %s"%ruta
 #### you may need to thicken the border in order to make tesseract feel happy to ocr your image #####
 offset=20
