@@ -20,10 +20,7 @@ def show2Images(img1,img2):
 	cv2.destroyAllWindows()
 ##############################################
 def recognizeText(img):
-	api = tesseract.TessBaseAPI()
-	api.Init(".","spa",tesseract.OEM_DEFAULT)
 	#api.SetVariable("tessedit_char_whitelist", "0123456789abcdefghijklmnopqrstuvwxyz")
-	api.SetPageSegMode(tesseract.PSM_AUTO)
 	height,width,channel=img.shape
 	#print img.shape
 	#print img.dtype.itemsize
@@ -35,13 +32,12 @@ def recognizeText(img):
 	tesseract.SetCvImage(iplimage,api)
 	text=api.GetUTF8Text()
 	conf=api.MeanTextConf()
-	image=None
+	img=None
+	iplimage = None
 	#print "..............."
-	print "Revistas: %s"
+	print "Revistas: "
 	print text
 	#print "Cofidence Level: %d %%"%conf
-	#cv2.waitKey(1000)
-
 ##############################################
 
 
@@ -65,7 +61,15 @@ ficheros = os.listdir(folder)
 
 print ficheros
 # Open one file
+
+#Inicializamos la api		
+api = tesseract.TessBaseAPI()
+api.Init(".","tmp3",tesseract.OEM_DEFAULT)
+api.SetPageSegMode(tesseract.PSM_AUTO)
+##########################################
+
 for i,fichero in enumerate(ficheros):
+	print 'Analizando %s'%fichero
 	img = cv2.imread(folder+"/"+fichero)
 	height,width,channel=img.shape
 	####################################
@@ -100,10 +104,10 @@ for i,fichero in enumerate(ficheros):
 	childrens=[]
 	childrens_cnt=[]
 
-	for i,cnt in enumerate(contours):
+	for j,cnt in enumerate(contours):
 
 	    # Check if it is an external contour and its area is more than 2000 PARENT
-		if hierarchy[0,i,3] == -1 and cv2.contourArea(cnt)>20000:
+		if hierarchy[0,j,3] == -1 and cv2.contourArea(cnt)>20000:
 			(x,y),(MA,ma),angle = cv2.fitEllipse(cnt)
 			m = cv2.moments(cnt)
 			cx,cy = m['m10']/m['m00'],m['m01']/m['m00']
@@ -131,11 +135,13 @@ for i,fichero in enumerate(ficheros):
 
 	#for i,parent in enumerate(parents):
 	#print(parents[0])
+	#for j,parent in enumerate(parents):
 	recognizeText(parents[0])
+	#cv2.destroyAllWindows()
 
-	cv2.destroyAllWindows()
-
-	
+#Fin del procesamiento
+api.End()
+#############################################
 	
 
 """

@@ -7,10 +7,10 @@ image0=cv2.imread("p.bmp")
 offset=20
 height,width,channel = image0.shape
 image1=cv2.copyMakeBorder(image0,offset,offset,offset,offset,cv2.BORDER_CONSTANT,value=(255,255,255)) 
-#cv2.namedWindow("Test")
-#cv2.imshow("Test", image1)
-#cv2.waitKey(0)
-#cv2.destroyWindow("Test")
+# cv2.namedWindow("Test")
+# cv2.imshow("Test", image1)
+# cv2.waitKey(0)
+# cv2.destroyWindow("Test")
 #####################################################################################################
 api = tesseract.TessBaseAPI()
 api.Init(".","eng",tesseract.OEM_DEFAULT)
@@ -45,3 +45,5 @@ image=None
 print "..............."
 print "Ocred Text: %s"%text
 print "Cofidence Level: %d %%"%conf
+
+raw_input("Press Enter to continue...")
