@@ -38,8 +38,6 @@ def recognizeText(img):
 	print "Revistas: "
 	print text
 	#print "Cofidence Level: %d %%"%conf
-	print "fin"
-
 ##############################################
 
 
@@ -68,6 +66,7 @@ print ficheros
 api = tesseract.TessBaseAPI()
 api.Init(".","tmp3",tesseract.OEM_DEFAULT)
 api.SetPageSegMode(tesseract.PSM_AUTO)
+##########################################
 
 for i,fichero in enumerate(ficheros):
 	print 'Analizando %s'%fichero
@@ -136,10 +135,10 @@ for i,fichero in enumerate(ficheros):
 	#for j,parent in enumerate(parents):
 	recognizeText(parents[0])
 	#cv2.destroyAllWindows()
-	print "otro ciclo"
+
 #Fin del procesamiento
 api.End()
-
+#############################################
 	
 
 """
