@@ -2,7 +2,7 @@ import tesseract
 import cv2
 import cv2.cv as cv
 
-image0=cv2.imread("img/p.bmp")
+image0=cv2.imread("p.bmp")
 #### you may need to thicken the border in order to make tesseract feel happy to ocr your image #####
 offset=20
 height,width,channel = image0.shape
