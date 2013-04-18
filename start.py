@@ -124,11 +124,13 @@ for i,fichero in enumerate(ficheros):
 			#mean = cv2.mean(img,mask = mask)
 			res = cv2.merge([res,res,res],None)
 			parents.append(res)
+			#recognizeText(res)
 			#dst = cv2.resize(res,dsize=(900,900),interpolation=cv.CV_INTER_LINEAR)
 			#cv2.imshow('img',dst)
 			#cv2.waitKey(0)
 
 	#for i,parent in enumerate(parents):
+	#print(parents[0])
 	recognizeText(parents[0])
 
 	cv2.destroyAllWindows()
