@@ -35,15 +35,32 @@ PSM_SINGLE_WORD 			Treat the image as a single word.
 PSM_CIRCLE_WORD 			Treat the image as a single word in a circle.
 PSM_SINGLE_CHAR 			Treat the image as a single character.
 PSM_COUNT 					Number of enum entries.
-"""
+
 arrcol = [
 	'cantidad',
 	'nombre',
 	'aparicion',
-	'codigo-titulo']
+	'aparicion2']
+"""
 
+arrcol = [
+	['v'  			,0],
+	['cantidad'     ,2],
+	['nombre'       ,0],
+	['aparicion'    ,0],
+	['iva'          ,1],
+	['req'          ,1],
+	['pvp iva'      ,0],
+	['imp s/iva'    ,1],
+	['desc'         ,1],
+	['neto'         ,1],
+	['aparicion2'   ,2],
+	['codigo'       ,2]]
+arrcod = []
 datos = []
 dato = []
+
+arresc = [3,17,20]
 for col,indice in enumerate(ficheros):
 	ruta = folder+"/"+ficheros[col]
 	image1=cv2.imread(ruta)
@@ -62,10 +79,10 @@ for col,indice in enumerate(ficheros):
 
 	height1,width1,channel1=image1.shape
 	print image1.shape
-	print image1.dtype.itemsize
-	width_step = width1*image1.dtype.itemsize
-	print width_step
-	#method 2
+#	print image1.dtype.itemsize
+#	width_step = width1*image1.dtype.itemsize
+#	print width_step
+#	method 2
 	cvmat_image=cv.fromarray(image1)
 	iplimage =cv.GetImage(cvmat_image)
 	print iplimage
@@ -76,46 +93,77 @@ for col,indice in enumerate(ficheros):
 	conf=api.MeanTextConf()
 	image=None
 	api.Clear()
-	##Procesamiento de texto
-	#Eliminar ciertos caracteres
 
-	print "...............\nTexto sin procesar:\n\n"+text
-	done = 0
+
+	#############################################################
+	##Procesamiento de texto
+	#############################################################
+
+
 	text = text.replace('\n\n','\n') 	#Clean white lines
+	text = text[:-1]					#Remove last char (\n) OCR returns
 	text = text.replace('l','1') 		#Misses so often...
 	text = text.upper()
 
-	if col==0:
-		text = text.replace('\n', ';')
-		done = 1
-
-	elif col==1:
-		text = text.replace('\n', ';')
-		done = 1
-
-	elif col==2:
-		text = text.replace('\n', ';')
-		done = 1
-
+	if col <= 1:
+		dato = text.split()
+		if col == 1:					#Eliminamos los huecos :)
+			for esc in reversed(arresc):
+				del dato[esc-3:esc-1]
+		dato = map(int, dato)
+		
 	elif col==3:
+		dato = map(int, text.split('\n'))
+
+	elif col==10:
 		text = text.replace('O', '0')
 		text = re.sub(r'[^\d\n ]','',text)
 		text = text.replace(' 0 ',',')
-		text = re.sub('\n ?',';',text)
-		done = 1
-	dato = text.split(';')
+		text = re.sub(' ?',	  '', text, flags=re.MULTILINE)
+		temp = re.sub(',\w*', '', text, flags=re.MULTILINE)
+		text = re.sub('\w*,', '', text, flags=re.MULTILINE)
+		dato = text.split('\n')
+		temp = temp.split('\n')
+		temp = map(int, temp)
+		#Conociendo el hueco
+		dato = map(int, dato)
+
+	else:
+		dato = text.split('\n')
+	dato.insert(0,arrcol[col][0])
 	datos.append(dato)
+	#print dato
+	print ".................................................................."
+temp.insert(0,'codigo')
+datos.append(temp)
+
+for esc in arresc:
+	for i in range(len((datos))):
+		if arrcol[i][1] == 1: datos[i].insert(esc,'')
+		if arrcol[i][1] == 2: datos[i].insert(esc-2,''); datos[i].insert(esc-2,'')
+
+
 """
 	if done:
 		print "..............."
-		print arrcol[col]+" procesado:\n\n%s\n\n"%text
+		print arrcol[col](0)+" procesado:\n\n%s\n\n"%text
 #	print "Cofidence Level: %d %%"%conf
 """
-print '\n\n'
+print '\n'
 for i in datos:
+		print len(i),
 		print i
-raw_input("Press Enter to continue...")
 
+
+print '\n\n'
+
+#Python es maravilloso
+datos = map(list, zip(*datos))
+for fila in datos:
+	print ''.join(str(e).rjust(20) for e in fila)
+
+print '\n\n'
+#raw_input("Press Enter to continue...")
 """
 Cargamos lista de imagenes
 Bucle de Procesamiento
