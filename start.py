@@ -4,6 +4,7 @@ import tesseract
 import math
 import numpy as np
 import os
+import glob
 import sys
 
 ## Funciones
@@ -48,29 +49,33 @@ def recognizeText(img):
 sistemaop = sys.platform
 if sistemaop=='darwin':
 	print 'Estas usando Mac'
+	ficheros = glob.glob('albaranes/*.jpg')
+	print ficheros
+
 elif sistemaop=='win32' or sistemaop=='win64':
 	print 'Estas en Win'
+	ficheros = glob.glob('albaranes\*.jpg')
+	print ficheros
+
 else:
 	print 'No estas ni en mac ni en win'
 ####################################
 
 ## Carga de archivos
-folder = "albaranes"
 # List files in "albaranes" folder
-ficheros = os.listdir(folder) 
 
-print ficheros
+
 # Open one file
 
 #Inicializamos la api		
 api = tesseract.TessBaseAPI()
-api.Init(".","tmp3",tesseract.OEM_DEFAULT)
+api.Init(".","spa",tesseract.OEM_DEFAULT)
 api.SetPageSegMode(tesseract.PSM_AUTO)
 ##########################################
 
 for i,fichero in enumerate(ficheros):
 	print 'Analizando %s'%fichero
-	img = cv2.imread(folder+"/"+fichero)
+	img = cv2.imread(fichero)
 	height,width,channel=img.shape
 	####################################
 
@@ -92,6 +97,17 @@ for i,fichero in enumerate(ficheros):
 		)
 	# Remove some small noise if any.
 	dilate = cv2.dilate(thresh,element)
+
+	erosion_x = 1
+	erosion_y = 1
+	erosion_size_x = 2
+	erosion_size_y = 3
+	erosion_type = cv2.MORPH_ELLIPSE
+	element = cv2.getStructuringElement(erosion_type,
+		( erosion_size_x + erosion_x, erosion_size_y + erosion_y ),
+		( erosion_x, erosion_y ) 
+		)
+
 	erode = cv2.erode(dilate,element)
 	#Showing images
 	#show2Images(dilate,erode)
