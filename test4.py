@@ -12,7 +12,7 @@ ficheros = os.listdir(folder)
 
 print ficheros
 api = tesseract.TessBaseAPI()
-api.Init(".","tmp3",tesseract.OEM_DEFAULT)
+api.Init(".","spa",tesseract.OEM_DEFAULT)
 #############################################################
 #api.SetVariable("global_tessdata_manager_debug_level","True")		#Increase verbosity (Debug)
 api.SetVariable("global_load_punc_dawg","False")					#Ignore punctuation patterns
