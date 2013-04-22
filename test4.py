@@ -23,8 +23,6 @@ def get_image_array():
 		imarray.append(iplimage)
 	return imarray
 
-<<<<<<< HEAD
-=======
 print ficheros
 api = tesseract.TessBaseAPI()
 api.Init(".","spa",tesseract.OEM_DEFAULT)
@@ -37,7 +35,6 @@ api.SetVariable("language_model_penalty_non_freq_dict_word","0.2") 	#Penalty for
 #api.SetVariable()
 #api.SetVariable()
 api.SetPageSegMode(tesseract.PSM_SINGLE_BLOCK)
->>>>>>> 40b2f11a00378c8db425c61f222fff767785284e
 """
 Opciones de SetPageSegMode
 PSM_OSD_ONLY 				Orientation and script detection only.
