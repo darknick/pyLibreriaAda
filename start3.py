@@ -262,8 +262,9 @@ def ordenacion(childs,contour_ord):
 	return childs
 #################################################
 def calc_child2 (parents):
-	child = []
+	childs_ids = []
 	image_childs = []
+	contours_childs = []
 	for jj,parent in enumerate(parents):
 		##Crop image
 		#Gray
@@ -326,8 +327,9 @@ def calc_child2 (parents):
 			cv2.waitKey(0)
 			cv2.destroyAllWindows()
 		"""	
-		print len(childs)
-	return childs	
+		childs_ids.append(childs)
+		contours_childs.append(contours3)
+	return childs_ids,contours_childs
 ###############################################
 ## Carga de archivos
 ficheros = load_files('albaranes')
@@ -347,6 +349,12 @@ for i,fichero in enumerate(ficheros):
 		print 'Analizando ' + fichero + '(' + str(i) + '/' + str(len(ficheros)) + ')'
 
 	img = cv2.imread(fichero)
+
+	if reposicion(img):
+		print 'Albaran de Reposicion'
+		continue
+
+	gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
 	height,width,channel=img.shape
 	rows,cols,channel=img.shape
 
@@ -359,11 +367,45 @@ for i,fichero in enumerate(ficheros):
 	parents = ordenacion(parents,contours)
 
 	if (INFO):
-		print ' - Parents have ' +str(len(parents))
+		if len(parents) == 4:
+			tipo = 'Albaran normal'
+		elif len(parents) == 5:
+			tipo = 'Albaran con informacion'
+		else:
+			tipo = 'Desconocido'
+		print ' - Parents have ' +str(len(parents)) +' ( '+ tipo +' ) '
 		#print parents
 	#Calculo de los Bloques hijos
-	childs = calc_child2(parents)
+	childs_ids,contours_child = calc_child2(parents)
+	if (INFO):
+		print ' - Estructura '
+		for i in range(0, len(childs_ids)):
+			print '   ' + str(len(childs_ids[i]))
+
+	###############################################################
+	# Make table
+	images_revistas = []
+	cuadro_derecha = childs_ids[2]
+	contour_derecha = contours_child[2]
+	cuadro_revistas = childs_ids[3]
+	contour_revistas = contours_child[3]
 	
+	for i  in range(0,11):
+		if i == 10:
+			mask = np.zeros(gray.shape,np.uint8)
+			cv2.drawContours(mask,[contour_derecha[cuadro_derecha[2]]],0,200,-1)
+			res = cv2.bitwise_and(img,img,mask=mask)
+			res = array2cv(res)
+			images_revistas.append(res)
+
+		else:		
+			mask = np.zeros(gray.shape,np.uint8)
+			cv2.drawContours(mask,[contour_revistas[cuadro_revistas[10 + i]]],0,200,-1)
+			res = cv2.bitwise_and(img,img,mask=mask)
+			res = array2cv(res)
+			images_revistas.append(res)
+
+
 	#for i,child in enumerate(childs):
 	#print childs
 	#contours_met1(parents)
