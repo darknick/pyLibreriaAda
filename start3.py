@@ -395,11 +395,14 @@ for i,fichero in enumerate(ficheros):
 			mask = np.zeros(gray.shape,np.uint8)
 			cv2.drawContours(mask,[contour_derecha[cuadro_derecha[2]]],0,200,-1)
 			res = cv2.bitwise_and(img,img,mask=mask)
+			res = array2cv(res)
 			images_revistas.append(res)
+
 		else:		
 			mask = np.zeros(gray.shape,np.uint8)
 			cv2.drawContours(mask,[contour_revistas[cuadro_revistas[10 + i]]],0,200,-1)
 			res = cv2.bitwise_and(img,img,mask=mask)
+			res = array2cv(res)
 			images_revistas.append(res)
 
 
