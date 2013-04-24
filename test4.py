@@ -23,9 +23,8 @@ def get_image_array():
 		imarray.append(iplimage)
 	return imarray
 
-print ficheros
 api = tesseract.TessBaseAPI()
-api.Init(".","spa",tesseract.OEM_DEFAULT)
+api.Init(".","tmp3",tesseract.OEM_DEFAULT)
 #############################################################
 #api.SetVariable("global_tessdata_manager_debug_level","True")		#Increase verbosity (Debug)
 api.SetVariable("global_load_punc_dawg","False")					#Ignore punctuation patterns
@@ -111,24 +110,24 @@ for col,iplimage in enumerate(imarray):
 	text = text[:-1]					#Remove last char (\n) OCR returns
 	text = text.replace('l','1') 		#Misses so often...
 	text = text.upper()
-
+	print text
 	if col == 0:
 		dato = map(int, text.split())
+	elif col == 2:
+		dato = text.split('\n')
+		if len(dato) > 15
+			print 'Problema '
 
-	elif col == 1:
-		dato = text.split()
-		for esc in reversed(arresc):
-			del dato[esc-3:esc-1]
-		dato = map(int, dato)
-		
-	elif col==3:
+	elif col == 3:
+		text = text.replace(' ', '')
 		dato = map(int, text.split('\n'))
 
 	elif col > 3 and col < 10:
 		text = text.replace(',', '.')
+		text = text.replace(' ', '') 	#Espacios fuera
 		dato = map(float, text.split('\n'))
 
-	elif col==10:						#La ultima sub-tabla necesita un trato especial
+	elif col= = 10:						#La ultima sub-tabla necesita un trato especial
 		text = text.replace('O', '0')
 		text = re.sub(r'[^\d\n ]','',text)
 		text = text.replace(' 0 ',',')
