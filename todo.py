@@ -6,7 +6,9 @@ import numpy as np
 import os
 import glob
 import sys
-import re
+import re 			#regex
+import csv 			
+import datetime		
 
 ## DEBUG AND INFO
 DEBUG = 0
@@ -14,13 +16,19 @@ DEBUG_CHILD = 0
 DEBUG_ORDENACION = 0
 DEBUG_CREACION_LISTA = 0
 
+DEBUG_ALBARAN = 0
+
 INFO = 1
+INFO_DATOS = 0
 
 ##
 OK = 0
 
-
+SAFE = 1
+EXPORTAR = 1
 ##
+
+
 def cv2array(im):
 	depth2dtype = {
 		cv.IPL_DEPTH_8U: 'uint8',
@@ -430,9 +438,10 @@ PSM_COUNT 					Number of enum entries.
 
 
 arrcol  = [
+	['albaran'		,0,	 8],
 	['v'			,0,  2],	#0
 	['c'			,2,  4],	#1
-	['nombre'		,0, 20],	#2
+	['nombre'		,0, 16],	#2
 	['num'			,0,  8],	#3
 	['iva'			,1,  8],	#4
 	['req'			,1,  8],	#5
@@ -443,17 +452,46 @@ arrcol  = [
 	['num'			,2,  8],	#10
 	['codigo'		,2, 10]]	#11
 
+## Creamos el objeto CSV
+if (EXPORTAR):
+	tabla_revistas = []
+	tabla_escandallos = []
+	tabla_albaranes = []
+	ahora = datetime.datetime.now()
+	"""
+	nombre_archivocsv = 'albaranes' + ahora.strftime("%y-%m-%d_%H-%M") + '.csv'
+	hojacsv = open(nombre_archivocsv, 'ab') #a para ir anadiendo, b para abrirlo como binary (estupido windows)
+	csvwriter = csv.writer(hojacsv, delimiter = ';', skipinitialspace = True)
+	"""
+
+if (OK):
+	aimprimir = "Procesando... \n[" + '.'*(len(ficheros)+1) + ']' + '\b' * (len(ficheros)+1)
+	sys.stdout.write(aimprimir)
+	sys.stdout.flush()
 
 
+
+###############################################
+###############################################
+###############################################
 for i,fichero in enumerate(ficheros):
+###############################################
+###############################################
+###############################################
+	if (OK):
+		flag_error_OK = 0 		#Always 0
 	#fichero = ficheros[3]
 	if (INFO):
-		print 'Analizando ' + fichero + '(' + str(i) + '/' + str(len(ficheros)) + ')'
+		print 'Analizando ' + fichero + ' (' + str(i+1) + '/' + str(len(ficheros)) + ')'
 
 	img = cv2.imread(fichero)
 	img_ocr = preprocesing_ocr(img)
 	if reposicion(img):
-		print 'Albaran de Reposicion'
+		if (OK):
+			print '\bo',
+			sys.stdout.flush()
+		if (INFO):
+			print "Es albaran de reposicion"
 		continue
 
 	gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
@@ -477,12 +515,12 @@ for i,fichero in enumerate(ficheros):
 			tipo = 'Albaran con informacion'
 		else:
 			tipo = 'Desconocido'
-		print ' - Parents have ' +str(len(parents)) +' ( '+ tipo +' ) '
+		print ' - Parents have ' + str(len(parents)) +' ( '+ tipo +' ) '
 		#print parents
 	#Calculo de los Bloques hijos
 	childs_ids,contours_child = calc_child2(parents)
 	if (INFO):
-		print ' - Estructura '
+		print ' - Estructura ',
 		for i in range(0, len(childs_ids)):
 			print '   ' + str(len(childs_ids[i])),
 		print ''
@@ -511,6 +549,12 @@ for i,fichero in enumerate(ficheros):
 			res = array2cv(res)
 			images_revistas.append(res)
 	"""
+	if (SAFE and len(cuadro_revistas) < 21):
+		if (OK):
+			print '\b\bE',
+			sys.stdout.flush()
+		continue
+
 	for i in range(0,11):
 		if i == 10:
 			images_revistas.append(recortar(img, contour_derecha[cuadro_derecha[2]]))
@@ -524,24 +568,27 @@ for i,fichero in enumerate(ficheros):
 
 	for i  in range(0,7):
 		images_albaranes.append(recortar(img, contour_albaran[cuadro_albaran[i]]))
-	#	cv2.imshow('parents',res)
-	#	cv2.waitKey(0)
-	#	cv2.destroyAllWindows()
-	print 'Texto del cuadro de albaran:'
+
+	datos_albaran = []
 	for i, iplimage in enumerate(images_albaranes):
 		tesseract.SetCvImage(iplimage, api)
 		text = api.GetUTF8Text()
 		text = text.replace('\n', '')
-		
-		print text + '  | ',
+		text = re.sub('[^\d]', '', text)
+		#text = text.replace(' ', '')
+		#text = re.sub('(?<=\d) *', '', text)
+		datos_albaran.append(text)
+	numero_albaran = datos_albaran[2]
 
-
+	if (DEBUG_ALBARAN):
+		print datos_albaran
+		continue
+	albaran = datos_albaran[2]
 	imarray = images_revistas
 	datos   = []			#Matriz revistas
 	dato    = []			#Lista auxiliar
 	arrescs = []			#Matriz escandallos
 	arresc  = []		#Lista para las posiciones de escandallos
-	arresc  = []
 
 	tesseract.SetCvImage(imarray[1],api)
 	#api.SetImage(m_any,width,height,channel1)
@@ -568,10 +615,15 @@ for i,fichero in enumerate(ficheros):
 				if (flag != oldflag):
 					#print 'Bingo! en ' + str(i) + ' , ' + e
 					arresc.append(i+1)					
-			elif '*' in e:
+			elif ('*' in e or len(e) > 2):
 				flag = 1
 			else:
 				dato[i] = 0
+				if (OK):
+					flag_error_OK = 1
+				elif (INFO):
+					print ' - Error en ' + str(i)+ ': ' + str(e)
+
 			oldflag = flag
 	if (DEBUG_CREACION_LISTA):
 		print 'Lista de posiciones de escandallo: ',
@@ -581,7 +633,7 @@ for i,fichero in enumerate(ficheros):
 		del dato[esc-3:esc-1]
 
 	dato_cantidad = map(int, dato)
-	dato_cantidad.insert(0,arrcol[1][0])
+	dato_cantidad.insert(0,arrcol[2][0])
 
 	for col,iplimage in enumerate(imarray):
 		if col == 1:
@@ -612,22 +664,23 @@ for i,fichero in enumerate(ficheros):
 		
 
 		if col == 0:
-			text = re.sub(r'[^123\n]', '', text)
+			text = re.sub('[^123\n]', '', text)
 			dato = text.split('\n') 
 			#dato = map(int, text.split())
 
 		elif col == 2:
+			text = re.sub('(?<=[A-Z])1', 'I', text)
 			dato = text.split('\n')
 
 		elif col > 2 and col < 10:
 			text = text.replace(',', '.')
-			text = re.sub(r'[^\d\n\.]', '', text)
+			text = re.sub('[^\d\n\.]', '', text)
 			dato = text.split ('\n')
 			#dato = map(float, text.split('\n'))
 
 		elif col==10:						#La ultima sub-tabla necesita un trato especial
 			text = text.replace('O', '0')
-			text = re.sub(r'[^\d\n ]','',text)
+			text = re.sub('[^\d\n ]','',text)
 			text = text.replace(' 0 ',',')
 			text = re.sub(' ?',	  '', text, flags=re.MULTILINE)
 			temp = re.sub(',\w*', '', text, flags=re.MULTILINE)
@@ -642,7 +695,7 @@ for i,fichero in enumerate(ficheros):
 			dato = text.split('\n')
 		if (DEBUG_CREACION_LISTA):
 			print dato
-		dato.insert(0,arrcol[col][0])
+		dato.insert(0,arrcol[col+1][0])
 		datos.append(dato)
 		del text
 
@@ -652,13 +705,13 @@ for i,fichero in enumerate(ficheros):
 
 	for j, esc in enumerate(arresc):
 		for i in range(len((datos))):
-			if arrcol[i][1] == 1: datos[i].insert(esc, '')
-			elif arrcol[i][1] == 2: 
+			if arrcol[i+1][1] == 1: datos[i].insert(esc, '')
+			elif arrcol[i+1][1] == 2: 
 				copia = datos[i][esc-2] if  i == 10 or i == 11 else ''
 				datos[i].insert(esc-2, copia); datos[i].insert(esc-2, copia)
-	#Calculamos las sumas de datos
-
-
+	
+	#Anadimos el numero de alb
+	datos.insert(0, ['albaran'] + [numero_albaran]*len(datos[0]))
 	#Python es maravilloso, transponemos la tabla
 	datos = zip(*datos)
 
@@ -667,26 +720,49 @@ for i,fichero in enumerate(ficheros):
 		arrescs.append(datos.pop(esc-2-2*i))
 		arrescs.append(datos.pop(esc-2-2*i))
 
-	#Imprimimos las matrices
-	print '\n..............\n# Revistas:'
-	for i,fila in enumerate(datos):
-		print str(i).ljust(3),
-		try:
-			print ''.join(str(e).decode('utf-8').rjust(arrcol[j][2]) for j,e in enumerate(fila))
-		except :
-			print ''.join(str(e).rjust(arrcol[j][2]) for j,e in enumerate(fila))
-			
-	if arrescs:
-		print '\n..............\n# Escandallos:'
-		for i,fila in enumerate(arrescs):
+	if (INFO_DATOS):
+		print '..............\nAlbaran ' + datos_albaran[2] + ' del ' + datos_albaran[0]
+		#Imprimimos las matrices
+		print '..............\n# Revistas:'
+		for i,fila in enumerate(datos):
 			print str(i).ljust(3),
 			try:
 				print ''.join(str(e).decode('utf-8').rjust(arrcol[j][2]) for j,e in enumerate(fila))
 			except :
 				print ''.join(str(e).rjust(arrcol[j][2]) for j,e in enumerate(fila))
-	print '..........................................................'
-
-
+				
+		if arrescs:
+			print '\n..............\n# Escandallos:'
+			for i,fila in enumerate(arrescs):
+				print str(i).ljust(3),
+				try:
+					print ''.join(str(e).decode('utf-8').rjust(arrcol[j][2]) for j,e in enumerate(fila))
+				except :
+					print ''.join(str(e).rjust(arrcol[j][2]) for j,e in enumerate(fila))
+		print '..........................................................'
+	if (EXPORTAR):
+		#Escribimos todo en las tablas
+		tabla_albaranes.append(datos_albaran)
+		tabla_revistas.extend(datos[1:])
+		if arrescs:
+			tabla_escandallos.extend(arrescs)
+		"""
+		datos[0] = datos_albaran
+		for i,elem in enumerate(datos):
+			if i == 1:
+				csvwriter.writerow(['revista s'])
+			csvwriter.writerow(elem)
+		if arrescs:
+			csvwriter.writerow(['escandallos'])
+		csvwriter.writerows(arrescs)
+		csvwriter.writerows([[],[]])
+		"""
+	if (OK and flag_error_OK):
+		print '\b*',
+		sys.stdout.flush()
+	elif (OK):
+		print '\bx',
+		sys.stdout.flush()
 
 	#for i,child in enumerate(childs):
 	#print childs
@@ -696,8 +772,37 @@ for i,fichero in enumerate(ficheros):
 	#cv2.imshow('img',dst)
 	#cv2.waitKey(0)
 	#cv2.destroyAllWindows()
+###############################################
+###############################################
+###############################################
+###############################################
+###############################################
+###############################################
+api.End()
+del api
 
-
+if (EXPORTAR):
+	n_csvalb = 'alb' + ahora.strftime("%y-%m-%d_%H-%M") + '.csv'
+	n_csvrev = 'rev' + ahora.strftime("%y-%m-%d_%H-%M") + '.csv'
+	n_csvesc = 'esc' + ahora.strftime("%y-%m-%d_%H-%M") + '.csv'
+	f_csvalb = open(n_csvalb, 'wb')
+	csv_alb = csv.writer(f_csvalb, delimiter = ';', skipinitialspace = True)
+	csv_alb.writerows(tabla_albaranes)
+	f_csvalb.close()
+	f_csvrev = open(n_csvrev, 'wb')
+	csv_rev = csv.writer(f_csvrev, delimiter = ';', skipinitialspace = True)
+	csv_rev.writerows(tabla_revistas)
+	f_csvrev.close()
+	f_csvesc = open(n_csvesc, 'wb')
+	csv_esc = csv.writer(f_csvesc, delimiter = ';', skipinitialspace = True)
+	csv_esc.writerows(tabla_escandallos)
+	f_csvesc.close()
+	"""
+	hojacsv.close
+	"""
+if (OK):
+	print '\b]  Echo!'
+raw_input("Presiona cualquier tecla para salir")
 ##Codigo OCR
 
 
