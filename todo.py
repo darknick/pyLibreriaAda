@@ -10,12 +10,14 @@ import re 			#regex
 import csv 			
 import datetime		
 
+
 ## DEBUG AND INFO
 DEBUG = 0
 DEBUG_CHILD = 0
 DEBUG_ORDENACION = 0
 DEBUG_CREACION_LISTA = 0
 
+DEBUG_VENCIMIENTO = 1
 DEBUG_ALBARAN = 0
 
 INFO = 1
@@ -25,7 +27,7 @@ INFO_DATOS = 0
 OK = 0
 
 SAFE = 1
-EXPORTAR = 1
+EXPORTAR = 0
 ##
 
 
@@ -390,9 +392,17 @@ def recortar(matimg, contorno, offset = [20,10,35,15], DSP = 1, ):
 	res = matimg[y:y+h,x:x+w]											#Recortamos con dicho offset
 	if DSP:
 		res = preprocesing_ocr(res)
-	iplbitmap = cv.CreateImageHeader((res.shape[1], res.shape[0]), cv.IPL_DEPTH_8U, 3)
-	cv.SetData(iplbitmap, res.tostring(), res.dtype.itemsize * 3 * res.shape[1])
+	iplbitmap = []
+	iplbitmap.append(cv.CreateImageHeader((res.shape[1], res.shape[0]), cv.IPL_DEPTH_8U, 3))
+	cv.SetData(iplbitmap[0], res.tostring(), res.dtype.itemsize * 3 * res.shape[1])
+	iplbitmap.append(res)
 	return iplbitmap
+###############################################
+def guardar_csv(tabla, nombre):
+	fichero = open(nombre, 'wb')
+	writer = csv.writer(fichero, delimiter = ';', skipinitialspace = True)
+	writer.writerows(tabla)
+	fichero.close()
 ###############################################
 ###############################################
 ###############################################
@@ -526,7 +536,7 @@ for i,fichero in enumerate(ficheros):
 		print ''
 
 	###############################################################
-	# Make table
+	# Recorte de la tabla de revistas
 
 	
 	images_revistas = []
@@ -534,21 +544,7 @@ for i,fichero in enumerate(ficheros):
 	contour_derecha = contours_child[2]
 	cuadro_revistas = childs_ids[3]
 	contour_revistas = contours_child[3]
-	"""
-	mask = np.zeros(gray.shape,np.uint8)
-	for i  in range(0,11):
-		if i == 10:			
-			cv2.drawContours(mask,[contour_derecha[cuadro_derecha[2]]],0,200,-1)
-			res = cv2.bitwise_and(img,img,mask=mask)
-			res = array2cv(res)
-			images_revistas.append(res)
 
-		else:		
-			cv2.drawContours(mask,[contour_revistas[cuadro_revistas[10 + i]]],0,200,-1)
-			res = cv2.bitwise_and(img,img,mask=mask)
-			res = array2cv(res)
-			images_revistas.append(res)
-	"""
 	if (SAFE and len(cuadro_revistas) < 21):
 		if (OK):
 			print '\b\bE',
@@ -557,17 +553,19 @@ for i,fichero in enumerate(ficheros):
 
 	for i in range(0,11):
 		if i == 10:
-			images_revistas.append(recortar(img, contour_derecha[cuadro_derecha[2]]))
+			images_revistas.append(recortar(img, contour_derecha[cuadro_derecha[2]])[0])
 		else:
-				images_revistas.append(recortar(img, contour_revistas[cuadro_revistas[10 + i]]))
+				images_revistas.append(recortar(img, contour_revistas[cuadro_revistas[10 + i]])[0])
+
+	############################################
+	# Albaran
 
 	images_albaranes = []
-	images_mat_albaranes = []
 	cuadro_albaran = childs_ids[1]
 	contour_albaran = contours_child[1]
 
-	for i  in range(0,7):
-		images_albaranes.append(recortar(img, contour_albaran[cuadro_albaran[i]]))
+	for i in range(0,7):
+		images_albaranes.append(recortar(img, contour_albaran[cuadro_albaran[i]])[0])
 
 	datos_albaran = []
 	for i, iplimage in enumerate(images_albaranes):
@@ -583,18 +581,71 @@ for i,fichero in enumerate(ficheros):
 	if (DEBUG_ALBARAN):
 		print datos_albaran
 		continue
-	albaran = datos_albaran[2]
-	imarray = images_revistas
+	del images_albaranes
+
+
+	############################################
+	# Vencimiento
+
+	contour_vencimiento = contour_revistas[cuadro_revistas[20]]
+	iplimage = recortar(img, contour_vencimiento, offset = [300,50,315,70])
+	"""
+	cv2.imshow('asd',iplimage[1])
+	cv2.waitKey(0)
+	cv2.destroyWindow('asd')
+	"""
+	datos = []
+	vencimientos = []
+	tesseract.SetCvImage(iplimage[0], api)
+	text = api.GetUTF8Text()
+	text = text[:-2]
+	text = text.replace('\n\n', '\n')
+	text = re.sub('[^\d\n ,/]', '', text)
+	text = text.replace(',', '.')
+	text = text.replace('  ', ' ')
+	if (DEBUG_VENCIMIENTO):
+		print 'Cuadro vencimiento:'
+		print text
+	datos_vencimiento = text.split('\n')
+	total_importe  = float(datos_vencimiento.pop())
+	total_revistas = int(datos_vencimiento[0])
+	del datos_vencimiento[0]
+	suma_revistas = 0
+	suma_importe = 0
+	aux = []
+	for elem in datos_vencimiento:
+		elem = elem.split(' ')
+		aux = elem[0].split('/')
+		elem[0] = aux[0]
+		elem.insert(1,aux[1])
+		suma_revistas += int(elem[1])
+		suma_importe  += float(elem[4])
+
+
+
+	"""
+	if str(total_importe)  != str(suma_importe):
+		if (DEBUG_VENCIMIENTO):	
+			print 'Aviso: Importe albaran (' + str(total_importe) + ' vs ' + str(suma_importe) + ')'
+	if str(total_revistas) != str(suma_revistas):
+		if (DEBUG_VENCIMIENTO):	
+			print 'Aviso: Suma revistas albaran (' + str(total_revistas) + ' vs ' + str(suma_revistas) + ')'
+	print '...................'
+	"""
+	continue
+
+
+
+
 	datos   = []			#Matriz revistas
 	dato    = []			#Lista auxiliar
 	arrescs = []			#Matriz escandallos
 	arresc  = []		#Lista para las posiciones de escandallos
 
-	tesseract.SetCvImage(imarray[1],api)
+	tesseract.SetCvImage(images_revistas[1],api)
 	#api.SetImage(m_any,width,height,channel1)
 	text=api.GetUTF8Text() # easy gg wp :D
 	#conf=api.MeanTextConf()
-	image=None
 	api.Clear()
 	text = text.replace('\n\n','\n') 	#Clean white lines
 	text = text[:-1]					#Remove last char (\n) OCR returns
@@ -635,7 +686,7 @@ for i,fichero in enumerate(ficheros):
 	dato_cantidad = map(int, dato)
 	dato_cantidad.insert(0,arrcol[2][0])
 
-	for col,iplimage in enumerate(imarray):
+	for col,iplimage in enumerate(images_revistas):
 		if col == 1:
 			continue
 		#############################################################
@@ -646,7 +697,7 @@ for i,fichero in enumerate(ficheros):
 		#api.SetImage(m_any,width,height,channel1)
 		text=api.GetUTF8Text() # easy gg wp :D
 		#conf=api.MeanTextConf()
-		image=None
+		iplimage=None
 		api.Clear()
 
 		#############################################################
@@ -698,7 +749,7 @@ for i,fichero in enumerate(ficheros):
 		dato.insert(0,arrcol[col+1][0])
 		datos.append(dato)
 		del text
-
+	del images_revistas
 	temp.insert(0,'codigo')
 	datos.insert(1,dato_cantidad)
 	datos.append(temp)
@@ -742,6 +793,10 @@ for i,fichero in enumerate(ficheros):
 		print '..........................................................'
 	if (EXPORTAR):
 		#Escribimos todo en las tablas
+		for elem in datos_vencimiento: #Añadimos la fecha
+			datos_albaran.append(elem[3])
+			elem.insert(0, numero_albaran)
+
 		tabla_albaranes.append(datos_albaran)
 		tabla_revistas.extend(datos[1:])
 		if arrescs:
@@ -772,6 +827,7 @@ for i,fichero in enumerate(ficheros):
 	#cv2.imshow('img',dst)
 	#cv2.waitKey(0)
 	#cv2.destroyAllWindows()
+
 ###############################################
 ###############################################
 ###############################################
@@ -782,21 +838,15 @@ api.End()
 del api
 
 if (EXPORTAR):
+	if (INFO):
+		print '.............'
+		print 'Guardando :)'
 	n_csvalb = 'alb' + ahora.strftime("%y-%m-%d_%H-%M") + '.csv'
 	n_csvrev = 'rev' + ahora.strftime("%y-%m-%d_%H-%M") + '.csv'
 	n_csvesc = 'esc' + ahora.strftime("%y-%m-%d_%H-%M") + '.csv'
-	f_csvalb = open(n_csvalb, 'wb')
-	csv_alb = csv.writer(f_csvalb, delimiter = ';', skipinitialspace = True)
-	csv_alb.writerows(tabla_albaranes)
-	f_csvalb.close()
-	f_csvrev = open(n_csvrev, 'wb')
-	csv_rev = csv.writer(f_csvrev, delimiter = ';', skipinitialspace = True)
-	csv_rev.writerows(tabla_revistas)
-	f_csvrev.close()
-	f_csvesc = open(n_csvesc, 'wb')
-	csv_esc = csv.writer(f_csvesc, delimiter = ';', skipinitialspace = True)
-	csv_esc.writerows(tabla_escandallos)
-	f_csvesc.close()
+	guardar_csv(tabla_albaranes, n_csvalb)
+	guardar_csv(tabla_revistas, n_csvrev)
+	guardar_csv(tabla_escandallos, n_csvesc)
 	"""
 	hojacsv.close
 	"""
