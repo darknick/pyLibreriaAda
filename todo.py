@@ -1,3 +1,5 @@
+#!/usr/bin/env python2.7
+
 import cv2.cv as cv
 import cv2
 import tesseract
@@ -28,8 +30,8 @@ INFO_DATOS = 1
 ##
 OK = 0
 
-SAFE = 1
-EXPORTAR = 0
+SAFE = 1 
+EXPORTAR = 1
 ##
 
 
@@ -114,13 +116,18 @@ def load_files (folder):
 		ficheros = glob.glob(folder + '/*.jpg')
 		print 'listing ' + str(len(ficheros)) + ' files'
 
+	elif sistemaop=='linux2':
+		print 'Estas en linux'
+		ficheros = glob.glob(folder + '/*.jpg')
+		print 'listing ' + str(len(ficheros)) + ' files'
+
 	elif sistemaop=='win32' or sistemaop=='win64':
 		print 'Estas en Win'
 		ficheros = glob.glob(folder + '\*.jpg')
 		print 'listing ' + str(len(ficheros)) + ' files'
 
 	else:
-		print 'No estas ni en mac ni en win'
+		print 'No estas ni en mac ni en win ni en linux(?)'
 	return ficheros
 
 
@@ -419,6 +426,8 @@ def safe_int(mystr):
 ###############################################
 ###############################################
 ###############################################
+
+
 ## Carga de archivos
 ficheros = load_files('albaranes')
 
