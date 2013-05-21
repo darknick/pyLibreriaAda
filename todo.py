@@ -17,11 +17,13 @@ DEBUG_CHILD = 0
 DEBUG_ORDENACION = 0
 DEBUG_CREACION_LISTA = 0
 
-DEBUG_VENCIMIENTO = 1
+DEBUG_VENCIMIENTO = 0
 DEBUG_ALBARAN = 0
 
+DEBUG_COMPROBACIONES = 0
+FAST_DEBUG = 0
 INFO = 1
-INFO_DATOS = 0
+INFO_DATOS = 1
 
 ##
 OK = 0
@@ -404,6 +406,17 @@ def guardar_csv(tabla, nombre):
 	writer.writerows(tabla)
 	fichero.close()
 ###############################################
+def safe_float(mystr):
+	if mystr == '':
+		return 0.0
+	else:
+		return float(mystr)
+def safe_int(mystr):
+	if mystr == '':
+		return 0
+	else:
+		return int(mystr)
+###############################################
 ###############################################
 ###############################################
 ## Carga de archivos
@@ -462,17 +475,13 @@ arrcol  = [
 	['num'			,2,  8],	#10
 	['codigo'		,2, 10]]	#11
 
-## Creamos el objeto CSV
+
 if (EXPORTAR):
 	tabla_revistas = []
 	tabla_escandallos = []
 	tabla_albaranes = []
+	tabla_vencimientos = []
 	ahora = datetime.datetime.now()
-	"""
-	nombre_archivocsv = 'albaranes' + ahora.strftime("%y-%m-%d_%H-%M") + '.csv'
-	hojacsv = open(nombre_archivocsv, 'ab') #a para ir anadiendo, b para abrirlo como binary (estupido windows)
-	csvwriter = csv.writer(hojacsv, delimiter = ';', skipinitialspace = True)
-	"""
 
 if (OK):
 	aimprimir = "Procesando... \n[" + '.'*(len(ficheros)+1) + ']' + '\b' * (len(ficheros)+1)
@@ -488,6 +497,15 @@ for i,fichero in enumerate(ficheros):
 ###############################################
 ###############################################
 ###############################################
+
+	flag_error_cantidad = 0
+	error_c_essolucionable = 0
+	flag_error_ven_revistas = 0
+	flag_error_ven_importe = 0
+
+	if (FAST_DEBUG and not (i % 2)):
+		continue
+
 	if (OK):
 		flag_error_OK = 0 		#Always 0
 	#fichero = ficheros[3]
@@ -580,7 +598,6 @@ for i,fichero in enumerate(ficheros):
 
 	if (DEBUG_ALBARAN):
 		print datos_albaran
-		continue
 	del images_albaranes
 
 
@@ -594,8 +611,7 @@ for i,fichero in enumerate(ficheros):
 	cv2.waitKey(0)
 	cv2.destroyWindow('asd')
 	"""
-	datos = []
-	vencimientos = []
+	datos_vencimiento = []
 	tesseract.SetCvImage(iplimage[0], api)
 	text = api.GetUTF8Text()
 	text = text[:-2]
@@ -603,39 +619,48 @@ for i,fichero in enumerate(ficheros):
 	text = re.sub('[^\d\n ,/]', '', text)
 	text = text.replace(',', '.')
 	text = text.replace('  ', ' ')
+
+
 	if (DEBUG_VENCIMIENTO):
 		print 'Cuadro vencimiento:'
 		print text
 	datos_vencimiento = text.split('\n')
-	total_importe  = float(datos_vencimiento.pop())
-	total_revistas = int(datos_vencimiento[0])
+	total_importe  = float(re.sub('[^\d.]', '', datos_vencimiento.pop()))
+	total_revistas = int(re.sub('[^\d.]', '',  datos_vencimiento[0]))
 	del datos_vencimiento[0]
 	suma_revistas = 0
 	suma_importe = 0
 	aux = []
+	if (DEBUG_VENCIMIENTO):
+		print '....'
+		print datos_vencimiento
+	aux_array = []
+	aux2_array = []
 	for elem in datos_vencimiento:
-		elem = elem.split(' ')
-		aux = elem[0].split('/')
-		elem[0] = aux[0]
-		elem.insert(1,aux[1])
-		suma_revistas += int(elem[1])
-		suma_importe  += float(elem[4])
+		aux_array = elem.split(' ')
+		aux = aux_array[0].split('/')
+		aux_array[0] = aux[0]
+		aux_array.insert(1,aux[1])
+		suma_revistas += int(aux_array[1])
+		suma_importe  += float(aux_array[4])
+		aux2_array.append(aux_array)
+	datos_vencimiento = aux2_array
+	if (DEBUG_VENCIMIENTO):
+		print '....'
+		print datos_vencimiento
+		print '......'
 
 
 
-	"""
+	
 	if str(total_importe)  != str(suma_importe):
+		flag_error_ven_importe = 1
 		if (DEBUG_VENCIMIENTO):	
 			print 'Aviso: Importe albaran (' + str(total_importe) + ' vs ' + str(suma_importe) + ')'
 	if str(total_revistas) != str(suma_revistas):
+		flag_error_ven_revistas = 1
 		if (DEBUG_VENCIMIENTO):	
 			print 'Aviso: Suma revistas albaran (' + str(total_revistas) + ' vs ' + str(suma_revistas) + ')'
-	print '...................'
-	"""
-	continue
-
-
-
 
 	datos   = []			#Matriz revistas
 	dato    = []			#Lista auxiliar
@@ -660,6 +685,7 @@ for i,fichero in enumerate(ficheros):
 		print 'Lista de cantidades: '
 		print dato
 	if dato:
+		cantidad_errores = 0
 		for i,e in enumerate(dato):
 			if e.isdigit():
 				flag = 0
@@ -670,12 +696,18 @@ for i,fichero in enumerate(ficheros):
 				flag = 1
 			else:
 				dato[i] = 0
+				flag_error_cantidad = 1
+				cantidad_errores += 1
 				if (OK):
 					flag_error_OK = 1
-				elif (INFO):
+				elif (INFO_DATOS):
 					print ' - Error en ' + str(i)+ ': ' + str(e)
-
 			oldflag = flag
+	numero_filas = len(dato)
+
+	if cantidad_errores == 1:
+		error_c_essolucionable = 1
+
 	if (DEBUG_CREACION_LISTA):
 		print 'Lista de posiciones de escandallo: ',
 		print arresc
@@ -744,11 +776,16 @@ for i,fichero in enumerate(ficheros):
 
 		else:
 			dato = text.split('\n')
+
+		for e in  range(numero_filas - len(dato)):
+			dato.append(0)
+
 		if (DEBUG_CREACION_LISTA):
 			print dato
 		dato.insert(0,arrcol[col+1][0])
 		datos.append(dato)
 		del text
+
 	del images_revistas
 	temp.insert(0,'codigo')
 	datos.insert(1,dato_cantidad)
@@ -763,6 +800,61 @@ for i,fichero in enumerate(ficheros):
 	
 	#Anadimos el numero de alb
 	datos.insert(0, ['albaran'] + [numero_albaran]*len(datos[0]))
+
+	# COMPROBACIONES
+	aux3 = 0
+	aux2 = 0
+	if (DEBUG_COMPROBACIONES):
+		print len(datos[2]),
+		print datos[2]
+		print len(datos[10])
+		print datos[10	]
+	for i,elem in enumerate(datos[2][1:]):
+			aux2 += safe_int(elem)
+			aux3 += safe_float(datos[10][i+1])
+	suma_local_revistas = aux2
+	suma_local_importe  = aux3
+	suma_local_referencias = len(datos[0])-1
+
+	if flag_error_cantidad:
+		if (INFO):
+			print "Error: Cantidad",
+		if error_c_essolucionable and not flag_error_ven_revistas:
+			for i,elem in enumerate(aux):
+				if datos[2][i+1] == 0:
+					datos[2][i+1] = total_revistas - suma_local_revistas
+			if (INFO):
+				print " (Solucionado)"
+		else:
+			if (INFO):
+				print ""
+	if flag_error_ven_revistas:
+		if (INFO):
+			print "Error: Suma cantidades",
+		if not flag_error_cantidad:
+			if str(suma_revistas) == int(suma_local_revistas):
+				total_revistas = suma_local_revistas
+			else:
+				suma_revistas = suma_local_revistas
+			if (INFO):
+				print " (Solucionado)"
+		else:
+			if (INFO):
+				print ""
+		if (INFO):
+			print "Error: Cuadro de vencimiento, revistas"
+	if flag_error_ven_importe:
+
+		if (INFO):
+			print "Error: Cuadro de vencimiento, importe"
+
+	else:
+		if str(total_importe) != str(suma_local_importe):
+			if (INFO):
+				print "Error: Total albaran (" + str(total_importe) + ' vs ' + str(suma_local_importe) + ')'
+	#suma_local_revistas = sum(datos)
+
+
 	#Python es maravilloso, transponemos la tabla
 	datos = zip(*datos)
 
@@ -772,7 +864,7 @@ for i,fichero in enumerate(ficheros):
 		arrescs.append(datos.pop(esc-2-2*i))
 
 	if (INFO_DATOS):
-		print '..............\nAlbaran ' + datos_albaran[2] + ' del ' + datos_albaran[0]
+		print '..............\nAlbaran ' + datos_albaran[2] + ' del ' + datos_albaran[0] + '. ' + str(suma_local_revistas) + ' revistas: ' + str(suma_local_importe) + ' euros.'
 		#Imprimimos las matrices
 		print '..............\n# Revistas:'
 		for i,fila in enumerate(datos):
@@ -793,25 +885,17 @@ for i,fichero in enumerate(ficheros):
 		print '..........................................................'
 	if (EXPORTAR):
 		#Escribimos todo en las tablas
-		for elem in datos_vencimiento: #Añadimos la fecha
+		datos_albaran.append(total_revistas)
+		datos_albaran.append(total_importe)
+		for elem in datos_vencimiento: #Anadimos la fecha
 			datos_albaran.append(elem[3])
 			elem.insert(0, numero_albaran)
-
+		tabla_vencimientos.extend(datos_vencimiento)
 		tabla_albaranes.append(datos_albaran)
 		tabla_revistas.extend(datos[1:])
 		if arrescs:
 			tabla_escandallos.extend(arrescs)
-		"""
-		datos[0] = datos_albaran
-		for i,elem in enumerate(datos):
-			if i == 1:
-				csvwriter.writerow(['revista s'])
-			csvwriter.writerow(elem)
-		if arrescs:
-			csvwriter.writerow(['escandallos'])
-		csvwriter.writerows(arrescs)
-		csvwriter.writerows([[],[]])
-		"""
+
 	if (OK and flag_error_OK):
 		print '\b*',
 		sys.stdout.flush()
@@ -844,9 +928,11 @@ if (EXPORTAR):
 	n_csvalb = 'alb' + ahora.strftime("%y-%m-%d_%H-%M") + '.csv'
 	n_csvrev = 'rev' + ahora.strftime("%y-%m-%d_%H-%M") + '.csv'
 	n_csvesc = 'esc' + ahora.strftime("%y-%m-%d_%H-%M") + '.csv'
+	n_csvven = 'ven' + ahora.strftime("%y-%m-%d_%H-%M") + '.csv'
 	guardar_csv(tabla_albaranes, n_csvalb)
 	guardar_csv(tabla_revistas, n_csvrev)
 	guardar_csv(tabla_escandallos, n_csvesc)
+	guardar_csv(tabla_vencimientos, n_csvven)
 	"""
 	hojacsv.close
 	"""
