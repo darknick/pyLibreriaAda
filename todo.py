@@ -23,7 +23,7 @@ DEBUG_VENCIMIENTO = 0
 DEBUG_ALBARAN = 0
 
 DEBUG_COMPROBACIONES = 0
-FAST_DEBUG = 0
+FAST_DEBUG = 1 #
 INFO = 1
 INFO_DATOS = 1
 
@@ -32,6 +32,9 @@ OK = 0
 
 SAFE = 1 
 EXPORTAR = 1
+
+
+EXP_FOLDER = "csv" 
 ##
 
 
@@ -109,25 +112,33 @@ def recognizeText(img):
 ##Modulos del programa
 #Carga de Archivos
 def load_files (folder):
+	"""
 	## Comprobacion de Sistema Operativo
 	sistemaop = sys.platform
 	if sistemaop=='darwin':
+		backslash = '/'
 		print 'Estas usando Mac'
 		ficheros = glob.glob(folder + '/*.jpg')
 		print 'listing ' + str(len(ficheros)) + ' files'
 
 	elif sistemaop=='linux2':
+		backslash = '/'
 		print 'Estas en linux'
 		ficheros = glob.glob(folder + '/*.jpg')
 		print 'listing ' + str(len(ficheros)) + ' files'
 
 	elif sistemaop=='win32' or sistemaop=='win64':
+		backslash = '\'
 		print 'Estas en Win'
 		ficheros = glob.glob(folder + '\*.jpg')
 		print 'listing ' + str(len(ficheros)) + ' files'
 
 	else:
 		print 'No estas ni en mac ni en win ni en linux(?)'
+	"""
+	ficheros = os.path.normpath(folder + '/*.jpg')
+	ficheros = glob.glob(ficheros)
+	print 'listing ' + str(len(ficheros)) + ' files'
 	return ficheros
 
 
@@ -408,7 +419,8 @@ def recortar(matimg, contorno, offset = [20,10,35,15], DSP = 1, ):
 	return iplbitmap
 ###############################################
 def guardar_csv(tabla, nombre):
-	fichero = open(nombre, 'wb')
+	nombre_norm = os.path.normpath(nombre)
+	fichero = open(nombre_norm, 'wb')
 	writer = csv.writer(fichero, delimiter = ';', skipinitialspace = True)
 	writer.writerows(tabla)
 	fichero.close()
@@ -491,6 +503,12 @@ if (EXPORTAR):
 	tabla_albaranes = []
 	tabla_vencimientos = []
 	ahora = datetime.datetime.now()
+	##Check if EXP_FOLDER exists
+	if not os.path.exists(EXP_FOLDER):
+		print "No existe el directorio " + EXP_FOLDER + ". Creado."
+		os.makedirs(EXP_FOLDER)
+	else:
+		print "El script exportara los csv en el directorio " + EXP_FOLDER
 
 if (OK):
 	aimprimir = "Procesando... \n[" + '.'*(len(ficheros)+1) + ']' + '\b' * (len(ficheros)+1)
@@ -934,10 +952,10 @@ if (EXPORTAR):
 	if (INFO):
 		print '.............'
 		print 'Guardando :)'
-	n_csvalb = 'alb' + ahora.strftime("%y-%m-%d_%H-%M") + '.csv'
-	n_csvrev = 'rev' + ahora.strftime("%y-%m-%d_%H-%M") + '.csv'
-	n_csvesc = 'esc' + ahora.strftime("%y-%m-%d_%H-%M") + '.csv'
-	n_csvven = 'ven' + ahora.strftime("%y-%m-%d_%H-%M") + '.csv'
+	n_csvalb = EXP_FOLDER + '/alb' + ahora.strftime("%y-%m-%d_%H-%M") + '.csv'
+	n_csvrev = EXP_FOLDER + '/rev' + ahora.strftime("%y-%m-%d_%H-%M") + '.csv'
+	n_csvesc = EXP_FOLDER + '/esc' + ahora.strftime("%y-%m-%d_%H-%M") + '.csv'
+	n_csvven = EXP_FOLDER + '/ven' + ahora.strftime("%y-%m-%d_%H-%M") + '.csv'
 	guardar_csv(tabla_albaranes, n_csvalb)
 	guardar_csv(tabla_revistas, n_csvrev)
 	guardar_csv(tabla_escandallos, n_csvesc)
